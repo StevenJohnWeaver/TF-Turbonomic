@@ -57,3 +57,10 @@ resource "aws_instance" "terraform-demo-ec2" {
     provider::turbonomic::get_tag() //tag the resource as optimized by Turbonomic Provider for Terraform 
   ) 
 }
+
+check "turbonomic_consistent_with_recommendation_check"{
+  assert {
+    condition =  aws_instance.terraform-instance-1.instance_type == coalesce(data.turbonomic_cloud_entity_recommendation.example.new_instance_type,aws_instance.terraform-instance-1.instance_type)
+    error_message = "Must use the latest recommended instance type,${coalesce(data.turbonomic_cloud_entity_recommendation.example.new_instance_type,aws_instance.terraform-instance-1.instance_type)}"
+  }
+}
