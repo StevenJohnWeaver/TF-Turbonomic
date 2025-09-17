@@ -40,27 +40,27 @@ variable "turbo_hostname" {
   sensitive   = false
 }
 
-data "turbonomic_cloud_entity_recommendation" "example" { 
-  entity_name  = "exampleVirtualMachine" // Name of the cloud entity (e.g., a virtual machine) to get recommendations for 
-  entity_type  = "VirtualMachine" // Type of the cloud entity (e.g., VirtualMachine, Database, etc.) 
-  default_size = "t3.nano" // Default instance size used if no recommendation is available. 
+data "turbonomic_cloud_entity_recommendation" "example" {
+  entity_name  = "exampleVirtualMachine"
+  entity_type  = "VirtualMachine"
+  default_size = "t3.nano"
 }
 
-# Create an AWS EC2 instance
-resource "aws_instance" "terraform-demo-ec2" { 
-  ami           = "ami-0de716d6197524dd9" # This is a publicly available Amazon Linux 2 AMI
-  instance_type = data.turbonomic_cloud_entity_recommendation.example.new_instance_type // Uses the recommended instance type from the Turbonomic data source. 
-  tags = merge( 
-    { 
-      Name = "exampleVirtualMachine" // Sets the Name tag for easy identification 
-    }, 
-    provider::turbonomic::get_tag() //tag the resource as optimized by Turbonomic Provider for Terraform 
-  ) 
+resource "aws_instance" "terraform-demo-ec2" {
+  ami           = "ami-0de716d6197524dd9"
+  instance_type = data.turbonomic_cloud_entity_recommendation.example.new_instance_type
+  tags = merge(
+    {
+      Name = "exampleVirtualMachine"
+    },
+    provider::turbonomic::get_tag()
+  )
 }
 
-check "turbonomic_consistent_with_recommendation_check"{
+check "turbonomic_consistent_with_recommendation_check" {
   assert {
-    condition =  aws_instance.terraform-instance-1.instance_type == coalesce(data.turbonomic_cloud_entity_recommendation.example.new_instance_type,aws_instance.terraform-instance-1.instance_type)
-    error_message = "Must use the latest recommended instance type,${coalesce(data.turbonomic_cloud_entity_recommendation.example.new_instance_type,aws_instance.terraform-instance-1.instance_type)}"
+    # Reference the correct resource name
+    condition = aws_instance.terraform-demo-ec2.instance_type == coalesce(data.turbonomic_cloud_entity_recommendation.example.new_instance_type, aws_instance.terraform-demo-ec2.instance_type)
+    error_message = "Must use the latest recommended instance type, ${coalesce(data.turbonomic_cloud_entity_recommendation.example.new_instance_type, aws_instance.terraform-demo-ec2.instance_type)}"
   }
 }
