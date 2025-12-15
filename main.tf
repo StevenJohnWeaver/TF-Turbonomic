@@ -12,7 +12,7 @@ terraform {
 } 
 
 provider "turbonomic" {
-  hostname = "trbwwy9kt0916.use1cp09.turbonomic.ibmappdomain.cloud"
+  hostname = "var.turbo_hostname"
   username = var.turbo_username
   password = var.turbo_password
   skipverify = true
