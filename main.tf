@@ -12,7 +12,7 @@ terraform {
 } 
 
 provider "turbonomic" {
-  hostname = "var.turbo_hostname"
+  hostname = var.turbo_hostname
   username = var.turbo_username
   password = var.turbo_password
   skipverify = true
