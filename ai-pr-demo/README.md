@@ -40,11 +40,14 @@ Terraform, opening the PR) runs exactly as it would from a real webhook call.
   hardcoded `instance_type`. This is the file Claude edits.
 - `webhook-service/` — the Express app that receives the webhook payload and
   invokes Claude Code.
-- `sample-payloads/scale-action.json` — a representative Turbonomic
-  `ActionApiDTO` payload for a cost-saving resize action
-  (`t3.small` → `t3.micro`). Field names follow Turbonomic's documented
-  shape, but if you later connect a real Turbonomic instance, capture one
-  real webhook payload and swap it in — exact fields vary by version.
+- `turbo-actions.sh` — queries a live Turbonomic instance for pending cloud
+  VM scale actions and saves the one you pick to
+  `live-payloads/action-<uuid>.json` (git-ignored). This is how the
+  supervised live demo (Variant A in [`DEMO_SCRIPT.md`](./DEMO_SCRIPT.md))
+  gets a real action instead of a sample.
+- `sample-payloads/scale-action.json` — a trimmed copy of a real Turbonomic
+  `ActionApiDTO` for the same resize (`t3.nano` → `t3a.nano`), for running
+  offline or through the webhook service.
 - `simulate.sh` — posts the sample payload to the running webhook service.
 
 ## Prerequisites
@@ -71,6 +74,21 @@ Terraform, opening the PR) runs exactly as it would from a real webhook call.
    By default it operates on the repo root two directories up
    (`REPO_ROOT` env var — override it if your clone lives elsewhere) and
    listens on port 4000 (`PORT` env var).
+
+## Run the demo (live, supervised)
+
+See Variant A in [`DEMO_SCRIPT.md`](./DEMO_SCRIPT.md): you ask Claude Code to
+check Turbonomic for outstanding optimizations, it lists them with
+`turbo-actions.sh`, and then processes the one you choose into a pull request.
+
+`turbo-actions.sh` logs in with `TURBO_USERNAME` / `TURBO_PASSWORD`. In a
+Claude Code cloud session, add a **Body parameter** network secret for the
+Turbonomic host with parameters `username` and `password` instead, and leave
+those variables unset — the proxy injects them. That secret type can't attach
+to bodiless requests, which is why the script only makes POST calls.
+`TURBO_HOST` (default `salesdemo01.customer.turbonomic.ibmappdomain.cloud`)
+and `TURBO_TARGET` (default `AWS-steve-demo`) select the instance and the
+cloud target to list.
 
 ## Run the demo (simulated)
 

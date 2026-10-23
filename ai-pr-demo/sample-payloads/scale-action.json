@@ -1,5 +1,5 @@
 {
-  "_comment": "Representative Turbonomic ActionApiDTO for a cost-saving SCALE (resize) action. Field names follow Turbonomic's documented ActionApiDTO/ActionDetailsApiDTO shape, but exact fields vary by Turbonomic version. If you connect a real instance, capture one real webhook payload (log the raw body in server.js) and swap this file for it.",
+  "_comment": "Representative Turbonomic ActionApiDTO for a SCALE action, trimmed from a real action captured with turbo-actions.sh --save. Used by simulate.sh (Variant B) and as an offline fallback; Variant A uses the live payload instead.",
   "uuid": "11112222-3333-4444-5555-666677778888",
   "actionType": "SCALE",
   "actionState": "READY",
@@ -8,31 +8,37 @@
   "target": {
     "uuid": "100",
     "displayName": "exampleVirtualMachine",
-    "className": "VirtualMachine"
+    "className": "VirtualMachine",
+    "discoveredBy": {
+      "displayName": "AWS-steve-demo",
+      "type": "AWS"
+    }
   },
   "currentEntity": {
-    "displayName": "exampleVirtualMachine",
-    "template": {
-      "name": "t3.small"
-    }
+    "displayName": "t3.nano",
+    "className": "ComputeTier"
   },
   "newEntity": {
-    "displayName": "exampleVirtualMachine",
-    "template": {
-      "name": "t3.micro"
-    }
+    "displayName": "t3a.nano",
+    "className": "ComputeTier"
   },
-  "details": "Resize VM exampleVirtualMachine from t3.small to t3.micro",
+  "details": "Scale Virtual Machine exampleVirtualMachine from t3.nano to t3a.nano in Steve Weaver",
   "risk": {
-    "description": "Virtual Machine exampleVirtualMachine is under-utilized given its current workload"
+    "subCategory": "Efficiency Improvement",
+    "description": "Underutilized vCPU",
+    "severity": "MINOR"
   },
   "stats": [
     {
       "name": "costPrice",
       "filters": [
-        { "type": "savingsType", "value": "savings" }
+        {
+          "type": "savingsType",
+          "value": "savings"
+        }
       ],
-      "value": 6.57
+      "units": "$/h",
+      "value": 0.0
     }
   ]
 }
