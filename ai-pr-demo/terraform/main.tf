@@ -17,7 +17,7 @@ provider "aws" {
 # ../webhook-service edits this file (not a data source) to match.
 resource "aws_instance" "turbonomic_managed_vm" {
   ami           = "ami-0de716d6197524dd9"
-  instance_type = "t3.small"
+  instance_type = "t3.micro"
 
   tags = {
     Name = "exampleVirtualMachine"
