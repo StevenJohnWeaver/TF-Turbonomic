@@ -1,0 +1,38 @@
+{
+  "_comment": "Representative Turbonomic ActionApiDTO for a cost-saving SCALE (resize) action. Field names follow Turbonomic's documented ActionApiDTO/ActionDetailsApiDTO shape, but exact fields vary by Turbonomic version. If you connect a real instance, capture one real webhook payload (log the raw body in server.js) and swap this file for it.",
+  "uuid": "11112222-3333-4444-5555-666677778888",
+  "actionType": "SCALE",
+  "actionState": "READY",
+  "actionMode": "MANUAL",
+  "createTime": "2026-10-23T12:00:00Z",
+  "target": {
+    "uuid": "100",
+    "displayName": "exampleVirtualMachine",
+    "className": "VirtualMachine"
+  },
+  "currentEntity": {
+    "displayName": "exampleVirtualMachine",
+    "template": {
+      "name": "t3.small"
+    }
+  },
+  "newEntity": {
+    "displayName": "exampleVirtualMachine",
+    "template": {
+      "name": "t3.micro"
+    }
+  },
+  "details": "Resize VM exampleVirtualMachine from t3.small to t3.micro",
+  "risk": {
+    "description": "Virtual Machine exampleVirtualMachine is under-utilized given its current workload"
+  },
+  "stats": [
+    {
+      "name": "costPrice",
+      "filters": [
+        { "type": "savingsType", "value": "savings" }
+      ],
+      "value": 6.57
+    }
+  ]
+}

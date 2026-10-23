@@ -2,6 +2,14 @@
 
 This repository contains a simple Terraform demo that shows how to use the IBM Turbonomic provider with HCP Terraform to provision an AWS EC2 instance using a Turbonomic recommendation.
 
+> **Related demo:** [`ai-pr-demo/`](./ai-pr-demo/) shows the complementary,
+> push-based pattern — a Turbonomic optimization action triggers a webhook
+> that an AI agent (Claude Code, standing in for IBM Bob Shell) uses to edit
+> Terraform code and open a GitHub pull request, following
+> [IBM's "Automate Terraform updates from Turbonomic actions with AI" tutorial](https://developer.ibm.com/tutorials/automating-terraform-updates-from-turbonomic-actions-with-ai/).
+> This demo (below) is the opposite, pull-based pattern: Terraform queries
+> Turbonomic for a recommendation at plan time.
+
 ## What this demo does
 
 During a Terraform run, the configuration:

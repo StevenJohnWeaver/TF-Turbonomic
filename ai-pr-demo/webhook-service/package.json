@@ -1,0 +1,13 @@
+{
+  "name": "turbonomic-ai-pr-webhook",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Receives Turbonomic action webhooks and invokes the Claude Code CLI to update Terraform code and open a GitHub PR.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
