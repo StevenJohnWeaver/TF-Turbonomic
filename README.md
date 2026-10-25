@@ -14,6 +14,25 @@ During a Terraform run, the configuration:
 
 At a high level, this demonstrates how HCP Terraform can consume Turbonomic guidance during infrastructure provisioning.
 
+## Two demo paths
+
+The configuration deploys two EC2 instances so both ways of acting on Turbonomic recommendations can be shown side by side:
+
+| | Automatic path | Governed (GitHub issue) path |
+|---|---|---|
+| Resource | `aws_instance.terraform-demo-ec2` | `aws_instance.governed-demo-ec2` |
+| Name in Turbonomic | `exampleVirtualMachine` | `exampleGovernedVM` |
+| `instance_type` | From the Turbonomic data source on every plan | Hard-coded, changed only by a reviewed PR |
+| `DemoPath` tag | `auto-provider` | `github-issue` |
+| Turbonomic policy | None needed | Cloud Scale All, Recommend only, GitHub Issue workflow on generation |
+
+- **Automatic path:** Turbonomic recommends a new size, and the next HCP Terraform plan picks it up and resizes the instance with no code change.
+- **Governed path:** Turbonomic generates a scale action, a webhook workflow opens a GitHub issue in this repository, and the HCP Terraform plan shows a `check` warning. Someone opens a PR that changes `instance_type` and closes the issue (`Fixes #N`). Merging the PR applies the change.
+
+The governed instance starts at `t3.medium` so that an idle instance gets a scale-down recommendation.
+
+See [GitHub issue governance setup](#github-issue-governance-setup) for the Turbonomic and GitHub configuration.
+
 ## Repository contents
 
 This demo is intentionally minimal and centers on a single Terraform configuration file:
@@ -188,15 +207,78 @@ After apply completes, verify:
 - The instance is tagged correctly
 - The Terraform check passes successfully
 
+## GitHub issue governance setup
+
+Based on the IBM Community blog [Using GitHub Issues to bring governance to Turbonomic resource optimizations for Infrastructure described as Code](https://community.ibm.com/community/user/blogs/anoop-john/2026/07/13/using-github-issues-to-govern-turbonomic-iac).
+
+### 1. Prepare the GitHub repository
+
+1. Make sure Issues is enabled under **Settings > General > Features**.
+2. Create the labels `turbonomic`, `automated` and `action-review`.
+3. Create a fine-grained personal access token limited to this repository, with **Issues: Read and write**.
+4. Test it:
+
+   ```bash
+   curl -H "Authorization: Bearer <TOKEN>" https://api.github.com/repos/StevenJohnWeaver/TF-Turbonomic
+   ```
+
+### 2. Create the webhook workflow in Turbonomic
+
+**Settings > Workflows > Create Workflow > Webhook**:
+
+- **Address:** `https://api.github.com/repos/StevenJohnWeaver/TF-Turbonomic/issues`
+- **HTTP method:** `POST`
+- **Authentication:** None (the token goes in a header)
+- **Headers:**
+  - `Authorization`: `Bearer <TOKEN>`
+  - `Accept`: `application/vnd.github+json`
+- **Request body:** JSON, using this template (replace `<YOUR-TURBO-HOST>`):
+
+```json
+{
+  "title": "Turbonomic ${action.actionType}: ${action.target.displayName}",
+  "body": "**Action Details**\n\n**Action Type:** ${action.actionType}\n**Target:** ${action.target.displayName}\n**Target UUID:** ${action.target.uuid}\n**Action UUID:** ${action.uuid}\n**Created At:** ${action.createTime}\n\n**Description**\n\n${action.details}\n\n---\n\n**Review Checklist**\n\n- [ ] Review the action details\n- [ ] Assess impact on dependent services\n- [ ] Approve or reject with comments\n- [ ] Update Terraform configuration if approved\n- [ ] Verify in Turbonomic UI: [View Action](https://<YOUR-TURBO-HOST>/app/#/view/main/action/${action.uuid})\n\n---\n\n**Automated Issue** | Created by Turbonomic Workflow | **Do not edit title or UUID**",
+  "labels": ["turbonomic", "automated", "action-review"],
+  "assignees": []
+}
+```
+
+Do not use `##` Markdown headings in the template. Turbonomic renders templates with Apache Velocity, where `##` starts a comment, so the rest of the line is dropped and the JSON breaks.
+
+To test, open any pending action in Turbonomic and copy the number at the end of its URL (`.../view/main/action/<uuid>`) into **Action UUID**. Run **Verify template**, then **Test webhook**.
+
+### 3. Create the group
+
+**Settings > Groups > New Group > Virtual Machine**, dynamic, with the filter **Tag** `DemoPath` = `github-issue`. The tag appears in the filter only after the governed instance is deployed and Turbonomic has rediscovered the AWS account.
+
+Check that the preview shows only `exampleGovernedVM`. A group scoped only by account matches every VM in the account, and each of them would create issues.
+
+### 4. Create the automation policy
+
+**Settings > Policies > New Automation Policy > Virtual Machine**:
+
+- **Scope:** the group from step 3
+- **Action type:** Cloud Scale All
+- **Action generation:** Recommend only
+- **On generation:** Non-critical workflow, `GitHub Issue - TF-Turbonomic`
+- **Execution schedule:** none (Recommend only actions are never executed)
+
+### Terraform target (optional)
+
+The blog also adds a Turbonomic **Terraform** (IaC) target connected to HCP Terraform, which adds code context to actions and enables the **IaC** group filters. It was not available on the Turbonomic SaaS trial used for this demo (only the **Terraform Provider** target was listed). The workflow works without it, using the tag-based group above.
+
 ## Expected behavior
 
-The key behavior in this demo is that the EC2 instance type is not hard-coded. Instead, it is derived from the Turbonomic recommendation data source.
+For the automatic path, the EC2 instance type is not hard-coded. Instead, it is derived from the Turbonomic recommendation data source.
 
-The configuration also includes a Terraform `check` block that ensures the provisioned instance type remains consistent with the recommended value. If there is a mismatch, the run will fail with a message similar to:
+Each instance has a Terraform `check` block that compares the deployed instance type with the latest Turbonomic recommendation. A failed check is reported as a **warning** in the plan or apply output and does not stop the run:
 
 ```text
 Must use the latest recommended instance type, <recommended_type>
+Turbonomic recommends <recommended_type> for exampleGovernedVM; resize via a PR that closes the open Turbonomic issue
 ```
+
+For the governed instance the warning is expected while a recommendation is pending. It goes away once a PR updates `instance_type`.
 
 ## Troubleshooting
 
@@ -233,6 +315,24 @@ If the consistency check fails, it usually means the instance type being applied
 
 Re-run the plan and confirm the recommendation is stable and being used consistently.
 
+For `exampleGovernedVM`, this warning is expected while a Turbonomic recommendation is waiting for a PR.
+
+### AWS target fails with "web identity token could not be validated"
+
+On Turbonomic SaaS, the IAM role option needs IBM's OIDC identity provider registered in your AWS account (see IBM's [Turbonomic SaaS IAM Role Setup](https://www.ibm.com/support/pages/turbonomic-saas-iam-role-setup)). For a trial, an IAM user with the AWS managed `ReadOnlyAccess` policy and an access key is quicker.
+
+### Webhook test fails
+
+- **HTML "Whoa there!" page (400):** the HTTP request is malformed, usually a stray space in a header name (for example `Authorization `) or in the address.
+- **401 Bad credentials:** the `Authorization` value is wrong. Delete the header and add it again rather than editing it, typing `Bearer ` by hand and then pasting the token.
+- **400 Problems parsing JSON:** the rendered template is not valid JSON. Check for `##` in the template (see the setup section).
+- **422 Validation failed:** usually one of the labels does not exist in the repository.
+
+### No GitHub issue is created
+
+- Check the group preview contains `exampleGovernedVM`.
+- Workflows run when an action is generated. An action that already existed before the policy was saved may not trigger it until the next analysis cycle.
+
 ## Security notes
 
 - Store `turbo_password` as a sensitive Terraform variable in HCP Terraform
@@ -250,7 +350,7 @@ To remove the demo resources:
 3. Review the destroy output
 4. Apply the destroy run
 
-This will remove the EC2 instance created by the demo.
+This will remove both EC2 instances created by the demo. Afterwards, also delete the GitHub token, the IAM user or access key used by Turbonomic, and close any open Turbonomic issues.
 
 ## Summary
 
