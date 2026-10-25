@@ -43,7 +43,7 @@ variable "turbo_hostname" {
 data "turbonomic_cloud_entity_recommendation" "example" {
   entity_name  = "exampleVirtualMachine"
   entity_type  = "VirtualMachine"
-  default_size = "t3.small"
+  default_size = "t3.nano"
 }
 
 resource "aws_instance" "terraform-demo-ec2" {
